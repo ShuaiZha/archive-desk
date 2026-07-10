@@ -22,6 +22,10 @@ htmlcov/
 *.session-journal
 *.session-shm
 *.session-wal
+credentials.bin
+sessions/
+*.sqlite
+*.sqlite3
 
 # Local runtime state and export artifacts
 .runtime/
