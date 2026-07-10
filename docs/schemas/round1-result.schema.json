@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://archive-desk.local/schemas/round1-result.schema.json",
+  "title": "Archive Desk round-one result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "export_id",
+    "generated_at",
+    "producer",
+    "account",
+    "scope",
+    "messages",
+    "assets"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "export_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "producer": {"$ref": "#/$defs/producer"},
+    "account": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["user_id", "display_name", "username"],
+      "properties": {
+        "user_id": {"type": "string", "pattern": "^[0-9]+$"},
+        "display_name": {"type": "string"},
+        "username": {"type": ["string", "null"]}
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["peer", "date_range", "upper_message_id", "snapshot_semantics"],
+      "properties": {
+        "peer": {"$ref": "#/$defs/peer"},
+        "date_range": {"$ref": "#/$defs/dateRange"},
+        "upper_message_id": {"type": "integer", "minimum": 0},
+        "snapshot_semantics": {"const": "BEST_EFFORT_AS_OBSERVED"}
+      }
+    },
+    "messages": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/message"}
+    },
+    "assets": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/asset"}
+    }
+  },
+  "$defs": {
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {"const": "Archive Desk"},
+        "version": {"type": "string", "minLength": 1, "maxLength": 64}
+      }
+    },
+    "peer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["peer_key", "type", "title", "username"],
+      "properties": {
+        "peer_key": {"type": "string", "minLength": 1, "maxLength": 128},
+        "type": {"enum": ["USER", "GROUP", "SUPERGROUP", "CHANNEL", "BOT"]},
+        "title": {"type": "string"},
+        "username": {"type": ["string", "null"]}
+      }
+    },
+    "nullableDate": {
+      "anyOf": [
+        {"type": "string", "format": "date"},
+        {"type": "null"}
+      ]
+    },
+    "nullableDateTime": {
+      "anyOf": [
+        {"type": "string", "format": "date-time"},
+        {"type": "null"}
+      ]
+    },
+    "dateRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "date_from",
+        "date_to",
+        "time_zone",
+        "normalized_start_utc",
+        "normalized_end_exclusive_utc"
+      ],
+      "properties": {
+        "date_from": {"$ref": "#/$defs/nullableDate"},
+        "date_to": {"$ref": "#/$defs/nullableDate"},
+        "time_zone": {"type": "string", "minLength": 1, "maxLength": 64},
+        "normalized_start_utc": {"$ref": "#/$defs/nullableDateTime"},
+        "normalized_end_exclusive_utc": {"$ref": "#/$defs/nullableDateTime"}
+      }
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "offset_utf16", "length_utf16"],
+      "properties": {
+        "type": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*$"},
+        "offset_utf16": {"type": "integer", "minimum": 0},
+        "length_utf16": {"type": "integer", "minimum": 0},
+        "url": {"type": ["string", "null"]},
+        "language": {"type": ["string", "null"]},
+        "custom_emoji_id": {"type": ["string", "null"]}
+      }
+    },
+    "sender": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["user_id", "display_name", "username"],
+      "properties": {
+        "user_id": {"type": ["string", "null"], "pattern": "^[0-9]+$"},
+        "display_name": {"type": ["string", "null"]},
+        "username": {"type": ["string", "null"]}
+      }
+    },
+    "message": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "peer_key",
+        "message_id",
+        "kind",
+        "date",
+        "edit_date",
+        "sender",
+        "text",
+        "entities",
+        "reply_to_message_id",
+        "asset_ids"
+      ],
+      "properties": {
+        "peer_key": {"type": "string", "minLength": 1, "maxLength": 128},
+        "message_id": {"type": "integer", "minimum": 1},
+        "kind": {"enum": ["MESSAGE", "SERVICE"]},
+        "date": {"type": "string", "format": "date-time"},
+        "edit_date": {"$ref": "#/$defs/nullableDateTime"},
+        "sender": {"$ref": "#/$defs/sender"},
+        "text": {"type": "string"},
+        "entities": {"type": "array", "items": {"$ref": "#/$defs/entity"}},
+        "reply_to_message_id": {"type": ["integer", "null"], "minimum": 1},
+        "asset_ids": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1, "maxLength": 128},
+          "uniqueItems": true
+        }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "asset_id",
+        "source_message_id",
+        "kind",
+        "original_name",
+        "mime_type",
+        "expected_size",
+        "status",
+        "relative_path",
+        "size_bytes",
+        "sha256",
+        "reason_code"
+      ],
+      "properties": {
+        "asset_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "source_message_id": {"type": "integer", "minimum": 1},
+        "kind": {"enum": ["PHOTO", "DOCUMENT", "OTHER"]},
+        "original_name": {"type": ["string", "null"]},
+        "mime_type": {"type": ["string", "null"]},
+        "expected_size": {"type": ["integer", "null"], "minimum": 0},
+        "status": {
+          "enum": ["DOWNLOADED", "SKIPPED_SIZE", "SKIPPED_POLICY", "UNAVAILABLE", "FAILED"]
+        },
+        "relative_path": {"type": ["string", "null"]},
+        "size_bytes": {"type": ["integer", "null"], "minimum": 0},
+        "sha256": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "reason_code": {"type": ["string", "null"], "pattern": "^[A-Z][A-Z0-9_]*$"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "DOWNLOADED"}}},
+          "then": {
+            "properties": {
+              "relative_path": {"type": "string", "minLength": 1},
+              "size_bytes": {"type": "integer", "minimum": 0},
+              "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+              "reason_code": {"type": "null"}
+            }
+          },
+          "else": {
+            "properties": {
+              "relative_path": {"type": "null"},
+              "size_bytes": {"type": "null"},
+              "sha256": {"type": "null"},
+              "reason_code": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*$"}
+            }
+          }
+        }
+      ]
+    }
+  }
+}

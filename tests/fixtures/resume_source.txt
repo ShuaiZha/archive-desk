@@ -1,0 +1,4 @@
+Archive Desk deterministic resume fixture.
+0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
+块边界之前😀块边界之后；这段 UTF-8 内容用于确认 offset 按字节而不是字符计算。
+The resumed file must be byte-for-byte identical to this source, with no duplicated prefix and no missing suffix.

@@ -1,0 +1,35 @@
+node_modules/
+dist/
+*.local
+.vite/
+.npm-cache/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Local credentials and Telegram authorization material
+.env
+.env.*
+!.env.example
+*.session
+*.session-journal
+*.session-shm
+*.session-wal
+
+# Local runtime state and export artifacts
+.runtime/
+backend/.runtime/
+download/
+exports/
+*.part
+*.partial
+
+# Test/tool caches
+.uv-cache/

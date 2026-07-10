@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://archive-desk.local/schemas/round1-manifest.schema.json",
+  "title": "Archive Desk round-one manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "export_id",
+    "created_at",
+    "producer",
+    "execution_status",
+    "completeness",
+    "config",
+    "counts",
+    "files",
+    "issues"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "export_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "created_at": {"type": "string", "format": "date-time"},
+    "producer": {"$ref": "#/$defs/producer"},
+    "execution_status": {"const": "SUCCEEDED"},
+    "completeness": {"enum": ["FULL", "POLICY_FILTERED", "PARTIAL"]},
+    "config": {"$ref": "#/$defs/config"},
+    "counts": {"$ref": "#/$defs/counts"},
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/file"}
+    },
+    "issues": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/issue"}
+    }
+  },
+  "$defs": {
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {"const": "Archive Desk"},
+        "version": {"type": "string", "minLength": 1, "maxLength": 64}
+      }
+    },
+    "nullableDate": {
+      "anyOf": [
+        {"type": "string", "format": "date"},
+        {"type": "null"}
+      ]
+    },
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "peer_key",
+        "date_from",
+        "date_to",
+        "time_zone",
+        "include_photos",
+        "include_documents",
+        "max_file_size"
+      ],
+      "properties": {
+        "peer_key": {"type": "string", "minLength": 1, "maxLength": 128},
+        "date_from": {"$ref": "#/$defs/nullableDate"},
+        "date_to": {"$ref": "#/$defs/nullableDate"},
+        "time_zone": {"type": "string", "minLength": 1, "maxLength": 64},
+        "include_photos": {"type": "boolean"},
+        "include_documents": {"type": "boolean"},
+        "max_file_size": {"type": "integer", "minimum": 0, "maximum": 4294967296}
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "messages",
+        "assets_discovered",
+        "assets_downloaded",
+        "assets_skipped_size",
+        "assets_skipped_policy",
+        "assets_unavailable",
+        "assets_failed",
+        "bytes_downloaded"
+      ],
+      "properties": {
+        "messages": {"type": "integer", "minimum": 0},
+        "assets_discovered": {"type": "integer", "minimum": 0},
+        "assets_downloaded": {"type": "integer", "minimum": 0},
+        "assets_skipped_size": {"type": "integer", "minimum": 0},
+        "assets_skipped_policy": {"type": "integer", "minimum": 0},
+        "assets_unavailable": {"type": "integer", "minimum": 0},
+        "assets_failed": {"type": "integer", "minimum": 0},
+        "bytes_downloaded": {"type": "integer", "minimum": 0}
+      }
+    },
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "role", "size_bytes", "sha256", "asset_id"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1, "maxLength": 240},
+        "role": {"enum": ["RESULT", "MEDIA"]},
+        "size_bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "asset_id": {"type": ["string", "null"], "minLength": 1, "maxLength": 128}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"role": {"const": "RESULT"}}},
+          "then": {"properties": {"asset_id": {"type": "null"}}},
+          "else": {"properties": {"asset_id": {"type": "string", "minLength": 1}}}
+        }
+      ]
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "asset_id", "message_id"],
+      "properties": {
+        "code": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*$"},
+        "asset_id": {"type": ["string", "null"]},
+        "message_id": {"type": ["integer", "null"], "minimum": 1}
+      }
+    }
+  }
+}
