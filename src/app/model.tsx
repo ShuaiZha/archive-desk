@@ -129,6 +129,8 @@ export interface ArchiveDeskModel {
   bootError: string;
   loadBootstrap: () => Promise<void>;
   credentialsConfigured: boolean;
+  containerMode: boolean;
+  canOpenLocalFolder: boolean;
   accounts: TelegramAccount[];
   selectedAccount: TelegramAccount | null;
   selectedAccountId: string;

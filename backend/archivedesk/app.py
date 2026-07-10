@@ -18,6 +18,7 @@ from fastapi import FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, StreamingResponse
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.staticfiles import StaticFiles
 
 from . import __version__
 from .config import Settings
@@ -36,7 +37,7 @@ from .schemas import (
     PasswordInput,
     PhoneInput,
 )
-from .security import SecretStore, mask_phone
+from .security import SecretStore, load_master_key, mask_phone
 from .telegram import TelegramError, TelegramProvider, TelethonProvider
 
 
@@ -98,7 +99,13 @@ def create_app(
     settings = settings or Settings.from_env()
     settings.prepare()
     database = Database(settings.database_path)
-    secret_store = SecretStore(settings.secret_path)
+    encryption_key = load_master_key(settings.master_key_file)
+    secret_store = SecretStore(settings.secret_path, encryption_key=encryption_key)
+    if settings.container_mode and settings.secret_path.exists():
+        secret_store.load()
+    if settings.default_output_root is not None:
+        default_output_root = settings.default_output_root.resolve()
+        database.add_output_root("container-exports", str(default_output_root))
     telegram_provider = provider or TelethonProvider(settings, secret_store)
     def current_secret_values():
         credentials = secret_store.credentials()
@@ -239,6 +246,10 @@ def create_app(
             "credentials_configured": secret_store.credentials() is not None,
             "accounts": [_public_account(account) for account in database.list_accounts()],
             "output_roots": database.list_output_roots(),
+            "capabilities": {
+                "container_mode": settings.container_mode,
+                "open_local_folder": os.name == "nt" and not settings.container_mode,
+            },
         }
 
     @app.get("/api/v1/telegram/credentials")
@@ -414,6 +425,8 @@ def create_app(
     async def add_output_root(payload: OutputRootInput) -> dict[str, Any]:
         try:
             path = Path(payload.path).expanduser().resolve()
+            if settings.container_mode and settings.default_output_root is not None:
+                path = ensure_within(settings.default_output_root.resolve(), path)
             path.mkdir(parents=True, exist_ok=True)
             if not path.is_dir():
                 raise ValueError("Not a directory")
@@ -590,7 +603,7 @@ def create_app(
     @app.post("/api/v1/export-jobs/{job_id}/open-folder", status_code=204)
     async def open_export_folder(job_id: str) -> Response:
         output = completed_output(job_or_404(job_id))
-        if os.name != "nt" or not hasattr(os, "startfile"):
+        if settings.container_mode or os.name != "nt" or not hasattr(os, "startfile"):
             raise HTTPException(status_code=501, detail="Opening folders is only supported on Windows")
         try:
             await asyncio.to_thread(os.startfile, str(output))  # type: ignore[attr-defined]
@@ -658,5 +671,24 @@ def create_app(
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
+
+    if settings.static_dir is not None:
+        static_dir = settings.static_dir.resolve()
+        assets_dir = static_dir / "assets"
+        if assets_dir.is_dir():
+            app.mount(
+                "/assets",
+                StaticFiles(directory=assets_dir),
+                name="frontend-assets",
+            )
+
+        @app.get("/{frontend_path:path}", include_in_schema=False)
+        async def frontend(frontend_path: str) -> FileResponse:
+            if frontend_path.startswith("api/"):
+                raise HTTPException(status_code=404, detail="API route not found")
+            requested = ensure_within(static_dir, static_dir / frontend_path)
+            if requested.is_file():
+                return FileResponse(requested)
+            return FileResponse(static_dir / "index.html", media_type="text/html")
 
     return app

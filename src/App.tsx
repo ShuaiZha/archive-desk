@@ -47,6 +47,8 @@ function ArchiveDeskApplication() {
   const [bootState, setBootState] = useState<BootState>("loading");
   const [bootError, setBootError] = useState("");
   const [credentialsConfigured, setCredentialsConfigured] = useState(false);
+  const [containerMode, setContainerMode] = useState(false);
+  const [canOpenLocalFolder, setCanOpenLocalFolder] = useState(true);
   const [accounts, setAccounts] = useState<TelegramAccount[]>([]);
   const [outputRoots, setOutputRoots] = useState<OutputRoot[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState("");
@@ -112,6 +114,8 @@ function ArchiveDeskApplication() {
 
   const applyBootstrap = useCallback((data: BootstrapResponse) => {
     setCredentialsConfigured(data.credentials_configured);
+    setContainerMode(data.capabilities?.container_mode ?? false);
+    setCanOpenLocalFolder(data.capabilities?.open_local_folder ?? true);
     setAccounts(data.accounts);
     setOutputRoots(data.output_roots);
     setSelectedAccountId((current) =>
@@ -579,6 +583,8 @@ function ArchiveDeskApplication() {
     bootError,
     loadBootstrap,
     credentialsConfigured,
+    containerMode,
+    canOpenLocalFolder,
     accounts,
     selectedAccount,
     selectedAccountId,

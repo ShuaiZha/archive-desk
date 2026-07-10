@@ -16,9 +16,9 @@ export function SettingsPage() {
     <main className="settings-page">
       <div className="settings-heading">
         <div>
-          <Badge appearance="tint" color="brand">本机设置</Badge>
+          <Badge appearance="tint" color="brand">{model.containerMode ? "容器设置" : "本机设置"}</Badge>
           <h1>账号与应用设置</h1>
-          <p>管理 Telegram API 凭据、当前账号和已经验证的本地目录。</p>
+          <p>管理 Telegram API 凭据、当前账号和已经验证的{model.containerMode ? "容器挂载" : "本地"}目录。</p>
         </div>
         <Button appearance="primary" onClick={() => navigate("/export")}>返回导出</Button>
       </div>
@@ -26,8 +26,8 @@ export function SettingsPage() {
       <section className="settings-card">
         <div className="settings-card-icon"><Key24Regular /></div>
         <div className="settings-card-copy">
-          <h2>Telegram API 凭据</h2>
-          <p>API Hash 只保存在本机后端，页面不会读取或显示现有值。</p>
+            <h2>Telegram API 凭据</h2>
+          <p>API Hash 只保存在{model.containerMode ? "加密数据卷" : "本机后端"}，页面不会读取或显示现有值。</p>
           <Badge appearance="outline" color={model.credentialsConfigured ? "success" : "danger"}>
             {model.credentialsConfigured ? "已配置" : "未配置"}
           </Badge>
@@ -74,7 +74,7 @@ export function SettingsPage() {
           <div className="settings-card-icon"><Folder24Regular /></div>
           <div className="settings-card-copy">
             <h2>已验证的输出目录</h2>
-            <p>这些目录曾由本地后端验证为可写。</p>
+            <p>这些目录曾由{model.containerMode ? "容器后端" : "本地后端"}验证为可写。</p>
           </div>
         </div>
         <div className="output-root-list">
@@ -84,7 +84,7 @@ export function SettingsPage() {
         </div>
       </section>
 
-      <div className="settings-security-note"><ShieldLock24Regular /><span>账号 Session 和 API Hash 不会进入浏览器存储。</span></div>
+      <div className="settings-security-note"><ShieldLock24Regular /><span>账号 Session 和 API Hash 不会进入浏览器存储{model.containerMode ? "，容器凭据由 Docker Secret 加密" : ""}。</span></div>
     </main>
   );
 }

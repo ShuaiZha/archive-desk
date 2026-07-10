@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import hashlib
 import json
 import time
@@ -674,3 +675,46 @@ def test_failed_scan_resumes_from_persisted_batch_cursor(tmp_path: Path) -> None
         assert completed["progress"]["capacity_checked"] is True
         assert second_session.before_message_ids == [351]
         assert len(json_load(Path(completed["output_path"]) / "result.json")["messages"]) == 600
+
+
+def test_container_mode_serves_spa_and_registers_persistent_output_root(tmp_path: Path) -> None:
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "index.html").write_text("<main>Archive Desk container</main>", encoding="utf-8")
+    (static_dir / "robots.txt").write_text("User-agent: *", encoding="utf-8")
+    master_key = tmp_path / "master-key"
+    master_key.write_text(base64.b64encode(b"d" * 32).decode("ascii"), encoding="ascii")
+    output = tmp_path / "exports"
+    settings = Settings(
+        data_dir=tmp_path / "state",
+        host="0.0.0.0",
+        container_mode=True,
+        static_dir=static_dir,
+        default_output_root=output,
+        master_key_file=master_key,
+    )
+
+    with TestClient(create_app(settings, FakeProvider())) as client:
+        bootstrap = client.get("/api/v1/bootstrap").json()
+        assert bootstrap["capabilities"] == {
+            "container_mode": True,
+            "open_local_folder": False,
+        }
+        assert bootstrap["output_roots"] == [
+            {"id": "container-exports", "path": str(output.resolve()), "created_at": bootstrap["output_roots"][0]["created_at"]}
+        ]
+        assert client.get("/").text == "<main>Archive Desk container</main>"
+        assert client.get("/jobs/example").text == "<main>Archive Desk container</main>"
+        assert client.get("/robots.txt").text == "User-agent: *"
+        assert client.get("/api/v1/health").json()["status"] == "ok"
+        assert client.get("/api/v1/missing").status_code == 404
+        assert client.post(
+            "/api/v1/output-roots",
+            json={"path": str(tmp_path / "outside-exports")},
+        ).status_code == 400
+        nested = client.post(
+            "/api/v1/output-roots",
+            json={"path": str(output / "nested")},
+        )
+        assert nested.status_code == 201
+        assert nested.json()["path"] == str((output / "nested").resolve())

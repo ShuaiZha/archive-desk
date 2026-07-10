@@ -23,6 +23,10 @@ Archive Desk 当前版本为 **0.1.0 Alpha**，实现以单机、单用户、单
 - 提交前独立读回 JSON、重算全部媒体哈希、核对计数、检查孤儿/临时/Session 文件并扫描已知 API Hash 泄漏。
 - SSE 支持 `Last-Event-ID` 和单调 `revision`，前端使用 SSE 触发快照刷新，15 秒轮询兜底。
 - API 错误统一包含 `code`、`category`、`retryable`、`user_action` 和 `request_id`。
+- 单容器多阶段构建，FastAPI 同源提供 React 页面和 API。
+- Compose 仅发布宿主机回环端口，使用 `/data` 与 `/exports` 双持久化边界。
+- Docker Secret 提供 256 位主密钥，API 凭据使用 AES-256-GCM 认证加密。
+- 容器以非 root 用户和只读根文件系统运行，并删除 Linux capabilities。
 
 ## 已自动验证
 
@@ -32,13 +36,14 @@ Archive Desk 当前版本为 **0.1.0 Alpha**，实现以单机、单用户、单
 - 扫描游标中断恢复。
 - 磁盘空间不足、目录锁定、Manifest/媒体篡改、孤儿文件和秘密 canary。
 - 前端 TypeScript 检查与生产构建。
+- Dockerfile 构建检查、真实镜像构建、健康检查、SPA 路由、Secret 密文和重启恢复。
 - `tests/acceptance/verify_round1.py --self-test` 离线门禁。
 
 ## 仍需外部环境验证
 
 - 使用真实 TB 级 Telegram 会话执行数小时或数天的长期运行验证。
 - 在真实网络中验证长时间断网、限流和 Telegram DC 迁移恢复。
-- 完成 Docker、CI、持久卷权限和网络访问边界设计。
+- 在更多 Docker Desktop/原生 Linux 环境验证卷权限并建立 CI 门禁。
 - 实现跨任务媒体缓存与文件去重，避免重复导出时重新下载相同媒体。
 
 这些项目需要真实账号、真实大数据量或最终部署环境，不能由离线 Fake Telegram 测试替代。

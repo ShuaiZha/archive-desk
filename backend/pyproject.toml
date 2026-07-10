@@ -10,6 +10,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
+  "cryptography>=46,<50",
   "fastapi>=0.115,<1",
   "pydantic>=2.9,<3",
   "telethon>=1.40,<2",

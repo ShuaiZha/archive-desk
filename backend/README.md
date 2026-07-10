@@ -27,6 +27,12 @@ uv run archivedesk-backend
 
 Windows 默认数据目录为 `%LOCALAPPDATA%\ArchiveDesk`，包括 SQLite 数据库、加密凭据和 Telethon Session。不要复制或分享 `sessions` 目录；其中的授权密钥等同于已登录账号。
 
+## Docker 运行
+
+容器模式由 `ARCHIVEDESK_CONTAINER=1` 启用，并要求通过 `ARCHIVEDESK_MASTER_KEY_FILE` 提供 Base64 编码的 256 位主密钥。凭据使用 AES-256-GCM 保存，前端静态文件由 `ARCHIVEDESK_STATIC_DIR` 同源提供。默认 Compose 配置把状态保存在 `/data`，把导出结果写入 `/exports`。
+
+完整部署方式见 [Docker 部署文档](../docs/DOCKER.md)。
+
 ## 第一轮边界
 
 当前下载图片、普通视频，以及没有被识别为视频消息、语音、音频、GIF 或贴纸的普通文档。任务选择一个会话，可自动读取最早和最晚消息时间，并支持自定义日期范围和单文件大小上限。Telegram Secret Chat、完整 Takeout split ranges、多会话批量导出和安装器属于后续阶段。

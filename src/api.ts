@@ -26,6 +26,10 @@ export interface BootstrapResponse {
   credentials_configured: boolean;
   accounts: TelegramAccount[];
   output_roots: OutputRoot[];
+  capabilities?: {
+    container_mode: boolean;
+    open_local_folder: boolean;
+  };
 }
 
 export type AuthFlowStatus = "code_required" | "password_required" | "authorized";

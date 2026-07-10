@@ -4,7 +4,7 @@
 
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-f59e0b.svg)](docs/IMPLEMENTATION_STATUS.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2563eb.svg)](LICENSE)
-[![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078d4.svg)](#系统要求)
+[![Runtime: Windows + Docker](https://img.shields.io/badge/runtime-Windows%20%2B%20Docker-0078d4.svg)](#系统要求)
 
 > [!WARNING]
 > Archive Desk 当前处于 Alpha 阶段。核心导出链路已经通过自动化测试，但真实 TB 级会话和极端网络环境仍在验证中。请勿将其作为唯一备份方案。
@@ -67,15 +67,18 @@ Archive Desk 把这条链路拆成四个清晰阶段：
 
 ## 系统要求
 
-- Windows 10 或 Windows 11
-- Python 3.11 或更高版本
-- Node.js 20 或更高版本
+推荐的 Docker 部署需要：
+
+- Windows 10/11、macOS 或 Linux
+- Docker Desktop 或 Docker Engine，包含 Docker Compose v2
 - Git
 - 从 [my.telegram.org](https://my.telegram.org) 申请的个人 `api_id` 和 `api_hash`
 
+本地源码开发还需要 Python 3.11+ 和 Node.js 20+。
+
 不要使用网上共享的 Telegram API 凭据，也不要把 API Hash、Telegram Session 或实际导出内容提交到版本库。
 
-## 快速开始
+## 快速开始（Docker 推荐）
 
 ### 1. 获取源码
 
@@ -84,7 +87,38 @@ git clone https://github.com/ShuaiZha/archive-desk.git
 cd archive-desk
 ```
 
-### 2. 安装并启动后端
+### 2. 生成 Docker Secret
+
+Windows PowerShell：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\New-DockerSecret.ps1
+New-Item -ItemType Directory -Path .\exports -Force | Out-Null
+```
+
+macOS/Linux 使用 `openssl` 的方式见 [Docker 部署文档](docs/DOCKER.md)。
+
+Secret 用于 AES-256-GCM 加密容器数据卷中的 API 凭据。请安全备份 `.docker/archivedesk_master_key`，不要上传、分享或在已有数据卷时重新生成。
+
+### 3. 构建并启动
+
+```powershell
+docker compose up --build -d
+```
+
+如果本机只提供独立命令，可等价使用 `docker-compose up --build -d`。
+
+打开 <http://127.0.0.1:4173>。
+
+- 数据库、Telegram Session 和加密凭据保存在 `/data` 命名卷。
+- 导出结果保存在宿主机的 `./exports`。
+- 容器内部监听 `0.0.0.0:8000`，Compose 默认只向宿主机 `127.0.0.1:4173` 发布。
+
+完整的密钥备份、卷管理、权限与故障排查见 [Docker 部署文档](docs/DOCKER.md)。
+
+## 本地源码开发
+
+启动后端：
 
 ```powershell
 cd backend
@@ -94,21 +128,16 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m archivedesk.main
 ```
 
-后端默认监听 `http://127.0.0.1:8000`。服务只允许绑定回环地址，不会直接监听局域网网卡。
-
-### 3. 安装并启动前端
-
-另开一个 PowerShell 窗口：
+另开一个 PowerShell 窗口，在仓库根目录启动前端：
 
 ```powershell
-cd archive-desk
 npm ci
 npm run dev
 ```
 
-打开 <http://127.0.0.1:4173>。
+后端监听 `http://127.0.0.1:8000`，前端监听 `http://127.0.0.1:4173`。
 
-### 4. 完成首次配置
+## 完成首次配置
 
 1. 在设置页填写自己的 Telegram API ID 和 API Hash。
 2. 输入手机号并提交 Telegram 验证码。
@@ -152,15 +181,18 @@ python tests\acceptance\verify_round1.py "D:\Telegram Archives\ArchiveDesk-examp
 
 ## 隐私与安全
 
-- 后端强制监听 `127.0.0.1`、`localhost` 或 `::1`。
+- 本地模式强制监听回环地址；容器模式只通过 Compose 向宿主机 `127.0.0.1` 发布。
 - Windows 上的 API ID/API Hash 使用当前 Windows 用户绑定的 DPAPI 加密保存。
+- Docker 模式必须提供 256 位主密钥，并使用 AES-256-GCM 认证加密凭据。
+- Docker Secret 通过 `/run/secrets/archivedesk_master_key` 文件挂载，不写入镜像或环境变量。
 - Telegram Session、SQLite 数据库和加密凭据默认保存在 `%LOCALAPPDATA%\ArchiveDesk`。
+- Docker 模式的状态保存在 `/data`，导出内容保存在 `/exports`。
 - Session 文件等同于已登录账号凭据，不应复制、上传或分享。
 - 导出内容只写入用户明确授权并通过写入验证的本机目录。
 - 最终完整性检查会拒绝残留 `.part`、Session、孤儿文件和已知秘密泄漏。
 - 仓库已忽略 `.runtime/`、`download/`、`*.session`、数据库、构建产物和依赖目录。
 
-当前正式支持范围是 Windows。非 Windows 代码路径尚未接入系统钥匙串，不建议用于保存真实 Telegram 凭据。
+当前正式支持 Windows 本地模式和 Docker 单容器模式。原生非 Windows、且未提供主密钥的兼容路径不建议用于保存真实 Telegram 凭据。
 
 ## 配置项
 
@@ -170,6 +202,10 @@ python tests\acceptance\verify_round1.py "D:\Telegram Archives\ArchiveDesk-examp
 | `ARCHIVEDESK_HOST` | `127.0.0.1` | 仅接受回环地址 |
 | `ARCHIVEDESK_PORT` | `8000` | 后端开发端口 |
 | `VITE_DEV_BACKEND_ORIGIN` | `http://127.0.0.1:8000` | Vite 开发代理目标 |
+| `ARCHIVEDESK_CONTAINER` | 未设置 | 设为 `1` 时启用容器运行边界 |
+| `ARCHIVEDESK_STATIC_DIR` | 未设置 | 同源前端静态文件目录 |
+| `ARCHIVEDESK_DEFAULT_OUTPUT_ROOT` | 未设置 | 自动注册的默认导出根目录 |
+| `ARCHIVEDESK_MASTER_KEY_FILE` | 未设置 | Base64 256 位主密钥文件；容器模式必填 |
 
 ## 开发与验证
 
@@ -199,6 +235,8 @@ npm run build
 
 ```text
 archive-desk/
+├─ Dockerfile                   前端与后端多阶段单镜像
+├─ compose.yaml                 本机回环端口、Secret 和双持久化边界
 ├─ src/                         React 前端
 ├─ backend/archivedesk/         FastAPI、Telethon、SQLite 和导出任务引擎
 ├─ backend/tests/               后端单元与集成测试
@@ -213,13 +251,14 @@ archive-desk/
 - [当前实施状态](docs/IMPLEMENTATION_STATUS.md)
 - [第一轮可执行规格](docs/ROUND1_SPEC.md)
 - [后端说明](backend/README.md)
+- [Docker 部署](docs/DOCKER.md)
 - [验收与故障注入](tests/README.md)
 
 ## Alpha 阶段尚未完成
 
 - 使用真实 TB 级 Telegram 会话进行数小时或数天的长期运行验证。
 - 在真实网络中验证长时间断网、限流和 Telegram DC 迁移恢复。
-- 完成 Docker、CI、持久卷权限和网络访问边界设计。
+- 在更多 Docker Desktop/原生 Linux 环境验证卷权限并建立 CI 门禁。
 - 实现跨任务媒体缓存与文件去重，避免重复任务重新下载相同媒体。
 
 这些项目需要真实账号、真实大数据量或最终部署环境，不能由 Fake Telegram 自动化测试替代。

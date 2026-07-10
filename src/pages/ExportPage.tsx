@@ -206,7 +206,7 @@ export function ExportPage() {
                 <div className="section-icon"><Folder24Regular /></div>
                 <div><h2 id="output-heading">3. 保存位置</h2><p>扫描前会验证目录，完成后媒体按类型和年月整理。</p></div>
               </div>
-              <Field label="本机导出目录" hint={model.outputRootId ? "目录已经通过写入验证。" : "输入绝对路径后验证目录。"}>
+              <Field label={model.containerMode ? "容器导出目录" : "本机导出目录"} hint={model.outputRootId ? "目录已经通过写入验证。" : model.containerMode ? "输入容器内的绝对路径，例如 /exports。" : "输入绝对路径后验证目录。"}>
                 <div className="path-input-row">
                   <Input contentBefore={<Folder24Regular />} value={model.outputPath} disabled={model.isJobActive} onChange={(_, data) => model.changeOutputPath(data.value)} />
                   <Button appearance="secondary" disabled={model.isJobActive || model.outputBusy} onClick={() => void model.registerOutputRoot()}>{model.outputBusy ? "正在验证" : "验证目录"}</Button>
@@ -218,7 +218,7 @@ export function ExportPage() {
         </div>
 
         <footer className="export-actionbar">
-          <div><ShieldLock24Regular /><span>所有数据只在本机处理。扫描不会下载媒体。</span></div>
+          <div><ShieldLock24Regular /><span>所有数据只在{model.containerMode ? "本机 Docker 容器" : "本机"}处理。扫描不会下载媒体。</span></div>
           <Button
             appearance="primary"
             size="large"

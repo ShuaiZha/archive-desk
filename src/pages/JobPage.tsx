@@ -361,8 +361,8 @@ export function JobPage() {
           <div className="completion-result">
             <div><strong>文件已保存到</strong><code>{job.output_path}</code></div>
             <div className="completion-actions">
-              <Button appearance="primary" size="large" icon={<FolderOpen24Regular />} onClick={() => void openFolder()}>打开导出文件夹</Button>
-              <Button appearance="secondary" icon={<Copy24Regular />} onClick={() => void model.copyOutputPath()}>复制路径</Button>
+              {model.canOpenLocalFolder && <Button appearance="primary" size="large" icon={<FolderOpen24Regular />} onClick={() => void openFolder()}>打开导出文件夹</Button>}
+              <Button appearance={model.canOpenLocalFolder ? "secondary" : "primary"} size={model.canOpenLocalFolder ? "medium" : "large"} icon={<Copy24Regular />} onClick={() => void model.copyOutputPath()}>{model.containerMode ? "复制容器路径" : "复制路径"}</Button>
               <a className="artifact-link" href={api.manifestUrl(job.id)} target="_blank" rel="noreferrer">查看完整性报告</a>
             </div>
           </div>
