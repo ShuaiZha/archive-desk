@@ -1,16 +1,11 @@
 from __future__ import annotations
 
 import ctypes
-import base64
-import binascii
 import json
 import os
 from ctypes import wintypes
 from pathlib import Path
 from typing import Any
-
-from cryptography.exceptions import InvalidTag
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 
 class _DataBlob(ctypes.Structure):
@@ -63,69 +58,37 @@ def _dpapi_unprotect(data: bytes) -> bytes:
 class SecretStore:
     """Small user-local secret store.
 
-    Windows uses DPAPI bound to the current user. Other platforms rely on a
-    mode-0600 file; production packaging can replace this class with a native
-    keyring without changing the API.
+    Windows uses DPAPI bound to the current user. Other platforms use a
+    mode-0600 plaintext file. Container deployments must protect the data
+    volume at the host and storage layer.
     """
 
     _WINDOWS_PREFIX = b"DPAPI1\0"
     _PORTABLE_PREFIX = b"PLAIN1\0"
-    _AES_GCM_PREFIX = b"AESGCM1\0"
-    _AES_GCM_AAD = b"ArchiveDesk.credentials.v1"
 
-    def __init__(self, path: Path, encryption_key: bytes | None = None):
-        if encryption_key is not None and len(encryption_key) != 32:
-            raise ValueError("Archive Desk encryption key must contain exactly 32 bytes")
+    def __init__(self, path: Path):
         self.path = path
-        self.encryption_key = encryption_key
 
     def load(self) -> dict[str, Any]:
         if not self.path.exists():
             return {}
         payload = self.path.read_bytes()
-        migrate_plaintext = False
-        if payload.startswith(self._AES_GCM_PREFIX):
-            if self.encryption_key is None:
-                raise ValueError("Encrypted credentials require the configured master key")
-            encrypted = payload[len(self._AES_GCM_PREFIX) :]
-            if len(encrypted) < 12 + 16:
-                raise ValueError("Encrypted credentials are truncated")
-            nonce, ciphertext = encrypted[:12], encrypted[12:]
-            try:
-                raw = AESGCM(self.encryption_key).decrypt(
-                    nonce,
-                    ciphertext,
-                    self._AES_GCM_AAD,
-                )
-            except InvalidTag as exc:
-                raise ValueError("Encrypted credentials failed authentication") from exc
-        elif payload.startswith(self._WINDOWS_PREFIX):
+        if payload.startswith(self._WINDOWS_PREFIX):
             if os.name != "nt":
                 raise ValueError("Windows DPAPI credentials cannot be read on this platform")
             raw = _dpapi_unprotect(payload[len(self._WINDOWS_PREFIX) :])
         elif payload.startswith(self._PORTABLE_PREFIX):
             raw = payload[len(self._PORTABLE_PREFIX) :]
-            migrate_plaintext = self.encryption_key is not None
         else:
             raise ValueError("Unsupported credentials file format")
         value = json.loads(raw.decode("utf-8"))
         if not isinstance(value, dict):
             raise ValueError("Invalid credentials file")
-        if migrate_plaintext:
-            self.save(value)
         return value
 
     def save(self, value: dict[str, Any]) -> None:
         raw = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-        if self.encryption_key is not None:
-            nonce = os.urandom(12)
-            ciphertext = AESGCM(self.encryption_key).encrypt(
-                nonce,
-                raw,
-                self._AES_GCM_AAD,
-            )
-            payload = self._AES_GCM_PREFIX + nonce + ciphertext
-        elif os.name == "nt":
+        if os.name == "nt":
             payload = self._WINDOWS_PREFIX + _dpapi_protect(raw)
         else:
             payload = self._PORTABLE_PREFIX + raw
@@ -146,21 +109,6 @@ class SecretStore:
 
     def save_credentials(self, api_id: int, api_hash: str) -> None:
         self.save({"api_id": api_id, "api_hash": api_hash})
-
-
-def load_master_key(path: Path | None) -> bytes | None:
-    if path is None:
-        return None
-    encoded = path.read_bytes().strip()
-    if not encoded:
-        raise ValueError("Archive Desk master key file is empty")
-    try:
-        key = base64.b64decode(encoded, validate=True)
-    except (binascii.Error, ValueError) as exc:
-        raise ValueError("Archive Desk master key must be standard base64") from exc
-    if len(key) != 32:
-        raise ValueError("Archive Desk master key must decode to exactly 32 bytes")
-    return key
 
 
 def mask_phone(phone: str | None) -> str | None:

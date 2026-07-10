@@ -30,7 +30,6 @@ class Settings:
     container_mode: bool = False
     static_dir: Path | None = None
     default_output_root: Path | None = None
-    master_key_file: Path | None = None
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -50,7 +49,6 @@ class Settings:
             container_mode=container_mode,
             static_dir=_optional_path("ARCHIVEDESK_STATIC_DIR"),
             default_output_root=_optional_path("ARCHIVEDESK_DEFAULT_OUTPUT_ROOT"),
-            master_key_file=_optional_path("ARCHIVEDESK_MASTER_KEY_FILE"),
         )
 
     @property
@@ -78,11 +76,6 @@ class Settings:
                 probe.unlink(missing_ok=True)
         if self.static_dir is not None and not (self.static_dir / "index.html").is_file():
             raise ValueError("ARCHIVEDESK_STATIC_DIR must contain index.html")
-        if self.container_mode:
-            if self.master_key_file is None:
-                raise ValueError("ARCHIVEDESK_MASTER_KEY_FILE is required in container mode")
-            if not self.master_key_file.is_file():
-                raise ValueError("ARCHIVEDESK_MASTER_KEY_FILE does not exist")
         if os.name != "nt":
             self.data_dir.chmod(0o700)
             self.session_dir.chmod(0o700)

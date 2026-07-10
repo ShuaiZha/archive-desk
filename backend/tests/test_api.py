@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import base64
 import hashlib
 import json
 import time
@@ -682,8 +681,6 @@ def test_container_mode_serves_spa_and_registers_persistent_output_root(tmp_path
     static_dir.mkdir()
     (static_dir / "index.html").write_text("<main>Archive Desk container</main>", encoding="utf-8")
     (static_dir / "robots.txt").write_text("User-agent: *", encoding="utf-8")
-    master_key = tmp_path / "master-key"
-    master_key.write_text(base64.b64encode(b"d" * 32).decode("ascii"), encoding="ascii")
     output = tmp_path / "exports"
     settings = Settings(
         data_dir=tmp_path / "state",
@@ -691,7 +688,6 @@ def test_container_mode_serves_spa_and_registers_persistent_output_root(tmp_path
         container_mode=True,
         static_dir=static_dir,
         default_output_root=output,
-        master_key_file=master_key,
     )
 
     with TestClient(create_app(settings, FakeProvider())) as client:

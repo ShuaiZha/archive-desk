@@ -37,7 +37,7 @@ from .schemas import (
     PasswordInput,
     PhoneInput,
 )
-from .security import SecretStore, load_master_key, mask_phone
+from .security import SecretStore, mask_phone
 from .telegram import TelegramError, TelegramProvider, TelethonProvider
 
 
@@ -99,10 +99,7 @@ def create_app(
     settings = settings or Settings.from_env()
     settings.prepare()
     database = Database(settings.database_path)
-    encryption_key = load_master_key(settings.master_key_file)
-    secret_store = SecretStore(settings.secret_path, encryption_key=encryption_key)
-    if settings.container_mode and settings.secret_path.exists():
-        secret_store.load()
+    secret_store = SecretStore(settings.secret_path)
     if settings.default_output_root is not None:
         default_output_root = settings.default_output_root.resolve()
         database.add_output_root("container-exports", str(default_output_root))

@@ -21,8 +21,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     ARCHIVEDESK_PORT=8000 \
     ARCHIVEDESK_DATA_DIR=/data \
     ARCHIVEDESK_STATIC_DIR=/app/static \
-    ARCHIVEDESK_DEFAULT_OUTPUT_ROOT=/exports \
-    ARCHIVEDESK_MASTER_KEY_FILE=/run/secrets/archivedesk_master_key
+    ARCHIVEDESK_DEFAULT_OUTPUT_ROOT=/exports
 
 RUN apt-get update \
     && apt-get install --no-install-recommends -y ca-certificates tzdata \

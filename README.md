@@ -87,18 +87,11 @@ git clone https://github.com/ShuaiZha/archive-desk.git
 cd archive-desk
 ```
 
-### 2. 生成 Docker Secret
-
-Windows PowerShell：
+### 2. 准备导出目录
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\New-DockerSecret.ps1
 New-Item -ItemType Directory -Path .\exports -Force | Out-Null
 ```
-
-macOS/Linux 使用 `openssl` 的方式见 [Docker 部署文档](docs/DOCKER.md)。
-
-Secret 用于 AES-256-GCM 加密容器数据卷中的 API 凭据。请安全备份 `.docker/archivedesk_master_key`，不要上传、分享或在已有数据卷时重新生成。
 
 ### 3. 构建并启动
 
@@ -110,11 +103,11 @@ docker compose up --build -d
 
 打开 <http://127.0.0.1:4173>。
 
-- 数据库、Telegram Session 和加密凭据保存在 `/data` 命名卷。
+- 数据库、Telegram Session 和 API 凭据保存在 `/data` 命名卷。
 - 导出结果保存在宿主机的 `./exports`。
 - 容器内部监听 `0.0.0.0:8000`，Compose 默认只向宿主机 `127.0.0.1:4173` 发布。
 
-完整的密钥备份、卷管理、权限与故障排查见 [Docker 部署文档](docs/DOCKER.md)。
+完整的卷管理、权限与故障排查见 [Docker 部署文档](docs/DOCKER.md)。
 
 ## 本地源码开发
 
@@ -183,16 +176,16 @@ python tests\acceptance\verify_round1.py "D:\Telegram Archives\ArchiveDesk-examp
 
 - 本地模式强制监听回环地址；容器模式只通过 Compose 向宿主机 `127.0.0.1` 发布。
 - Windows 上的 API ID/API Hash 使用当前 Windows 用户绑定的 DPAPI 加密保存。
-- Docker 模式必须提供 256 位主密钥，并使用 AES-256-GCM 认证加密凭据。
-- Docker Secret 通过 `/run/secrets/archivedesk_master_key` 文件挂载，不写入镜像或环境变量。
-- Telegram Session、SQLite 数据库和加密凭据默认保存在 `%LOCALAPPDATA%\ArchiveDesk`。
+- Docker 模式不对 API ID/API Hash 做应用层加密；凭据以仅限容器用户读取的 `0600` 文件保存在 `/data/credentials.bin`。
+- Telegram Session、SQLite 数据库和凭据默认保存在 `%LOCALAPPDATA%\ArchiveDesk`。
 - Docker 模式的状态保存在 `/data`，导出内容保存在 `/exports`。
+- 必须保护 Docker 主机和 `/data` 数据卷，不要发布、复制或共享该卷。
 - Session 文件等同于已登录账号凭据，不应复制、上传或分享。
 - 导出内容只写入用户明确授权并通过写入验证的本机目录。
 - 最终完整性检查会拒绝残留 `.part`、Session、孤儿文件和已知秘密泄漏。
 - 仓库已忽略 `.runtime/`、`download/`、`*.session`、数据库、构建产物和依赖目录。
 
-当前正式支持 Windows 本地模式和 Docker 单容器模式。原生非 Windows、且未提供主密钥的兼容路径不建议用于保存真实 Telegram 凭据。
+当前正式支持 Windows 本地模式和 Docker 单容器模式。Docker 模式的凭据保护依赖宿主机与数据卷访问控制。
 
 ## 配置项
 
@@ -205,7 +198,6 @@ python tests\acceptance\verify_round1.py "D:\Telegram Archives\ArchiveDesk-examp
 | `ARCHIVEDESK_CONTAINER` | 未设置 | 设为 `1` 时启用容器运行边界 |
 | `ARCHIVEDESK_STATIC_DIR` | 未设置 | 同源前端静态文件目录 |
 | `ARCHIVEDESK_DEFAULT_OUTPUT_ROOT` | 未设置 | 自动注册的默认导出根目录 |
-| `ARCHIVEDESK_MASTER_KEY_FILE` | 未设置 | Base64 256 位主密钥文件；容器模式必填 |
 
 ## 开发与验证
 
@@ -236,7 +228,7 @@ npm run build
 ```text
 archive-desk/
 ├─ Dockerfile                   前端与后端多阶段单镜像
-├─ compose.yaml                 本机回环端口、Secret 和双持久化边界
+├─ compose.yaml                 本机回环端口和双持久化边界
 ├─ src/                         React 前端
 ├─ backend/archivedesk/         FastAPI、Telethon、SQLite 和导出任务引擎
 ├─ backend/tests/               后端单元与集成测试

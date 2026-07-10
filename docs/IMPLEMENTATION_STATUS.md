@@ -6,7 +6,7 @@ Archive Desk 当前版本为 **0.1.0 Alpha**，实现以单机、单用户、单
 
 ## 已落地
 
-- Telegram API 凭据加密保存，手机号、验证码和可选 2FA 登录。
+- Windows 本地模式使用 DPAPI 保存 Telegram API 凭据；容器模式使用数据卷权限保护凭据；支持手机号、验证码和可选 2FA 登录。
 - 登录流程查询、验证码重发和取消，取消后清理临时 Session。
 - 会话刷新、搜索、游标分页和消息时间边界查询。
 - 创建任务使用 `Idempotency-Key`，相同键和相同配置返回原任务，不同配置返回 `IDEMPOTENCY_CONFLICT`。
@@ -25,7 +25,7 @@ Archive Desk 当前版本为 **0.1.0 Alpha**，实现以单机、单用户、单
 - API 错误统一包含 `code`、`category`、`retryable`、`user_action` 和 `request_id`。
 - 单容器多阶段构建，FastAPI 同源提供 React 页面和 API。
 - Compose 仅发布宿主机回环端口，使用 `/data` 与 `/exports` 双持久化边界。
-- Docker Secret 提供 256 位主密钥，API 凭据使用 AES-256-GCM 认证加密。
+- Docker 模式将 API 凭据保存在 `/data/credentials.bin`，依赖宿主机与数据卷访问控制，不提供应用层加密。
 - 容器以非 root 用户和只读根文件系统运行，并删除 Linux capabilities。
 
 ## 已自动验证
@@ -36,7 +36,7 @@ Archive Desk 当前版本为 **0.1.0 Alpha**，实现以单机、单用户、单
 - 扫描游标中断恢复。
 - 磁盘空间不足、目录锁定、Manifest/媒体篡改、孤儿文件和秘密 canary。
 - 前端 TypeScript 检查与生产构建。
-- Dockerfile 构建检查、真实镜像构建、健康检查、SPA 路由、Secret 密文和重启恢复。
+- Dockerfile 构建检查、真实镜像构建、健康检查、SPA 路由、数据卷凭据持久化和重启恢复。
 - `tests/acceptance/verify_round1.py --self-test` 离线门禁。
 
 ## 仍需外部环境验证
